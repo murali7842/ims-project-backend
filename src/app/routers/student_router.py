@@ -19,3 +19,4 @@ async def create_student(sch: CreateStudentSch, session: AsyncSession = Depends(
 
 
 
+
