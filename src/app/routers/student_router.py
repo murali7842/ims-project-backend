@@ -17,3 +17,5 @@ async def create_student(sch: CreateStudentSch, session: AsyncSession = Depends(
                          service: StudentService = Depends(get_student_service)):
     return Response[int](body=await service.create_student(sch, session))
 
+
+
