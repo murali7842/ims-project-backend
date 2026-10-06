@@ -61,16 +61,16 @@ def get_auth_service(user_repo: UserRepo = Depends(get_user_repo),
     return AuthServiceImpl(user_repo,otp_repo)
 
 def get_operator_service(operator_repo: OperatorRepo = Depends(get_operator_repo),
-        user_repo: UserRepo = Depends(get_user_repo)
-
+        user_repo: UserRepo = Depends(get_user_repo),
+        institution_repo: InstitutionRepo = Depends(get_institution_repo)
                           ) -> OperatorService:
-    return OperatorServiceImpl(operator_repo,user_repo)
+    return OperatorServiceImpl(operator_repo, user_repo, institution_repo)
 
 def get_teacher_service(teacher_repo: TeacherRepo = Depends(get_teacher_repo),
-                        user_repo: UserRepo = Depends(get_user_repo)
-
+                        user_repo: UserRepo = Depends(get_user_repo),
+                        institution_repo: InstitutionRepo = Depends(get_institution_repo)
                           ) -> TeacherService:
-    return TeacherServiceImpl(teacher_repo,user_repo)
+    return TeacherServiceImpl(teacher_repo, user_repo, institution_repo)
 
 def get_course_service(course_repo: CourseRepo = Depends(get_course_repo),
                         user_repo: UserRepo = Depends(get_user_repo)
@@ -84,9 +84,10 @@ def get_batch_service(batch_repo: BatchRepo = Depends(get_batch_repo)
     return BatchServiceImpl(batch_repo)
 def get_student_service(student_repo: StudentRepo = Depends(get_student_repo),
                         user_repo: UserRepo = Depends(get_user_repo),
-                        course_repo : CourseRepo = Depends(get_course_repo)
+                        course_repo : CourseRepo = Depends(get_course_repo),
+                        batch_repo: BatchRepo = Depends(get_batch_repo)
                           ) -> StudentService:
-    return StudentServiceImpl(student_repo,user_repo,course_repo)
+    return StudentServiceImpl(student_repo, user_repo, course_repo, batch_repo)
 
 def get_payment_service(payment_repo: PaymentRepo = Depends(get_payment_repo),
                         user_repo: UserRepo = Depends(get_user_repo),

@@ -1,7 +1,13 @@
+import enum
 from pydantic import BaseModel
 
 from src.app.models.institution import Institution
 
+
+class InstitutionSortBy(str, enum.Enum):
+    ID = "id"
+    NAME = "name"
+    EMAIL = "email"
 
 class InstitutionCreateSch(BaseModel):
     name: str
@@ -15,12 +21,15 @@ class InstitutionCreateSch(BaseModel):
         entity.address = self.address
         entity.contact_number = self.contact_number
 
+class InstitutionUpdateSch(InstitutionCreateSch):
+    id: int
+
 class InstitutionSch(BaseModel):
     id: int
     name: str
     email: str
     address: str
-    contact_number: str
+    contact_number: str | None
 
     @staticmethod
     def from_entity(entity: Institution):
@@ -31,3 +40,15 @@ class InstitutionSch(BaseModel):
             address=entity.address,
             contact_number=entity.contact_number
         )
+
+class InstitutionDropDown(BaseModel):
+    id: int
+    name: str
+
+    @staticmethod
+    def from_entity(entity: Institution) -> "InstitutionDropDown":
+        return InstitutionDropDown(
+            id=entity.id,
+            name=entity.name
+        )
+

@@ -18,3 +18,11 @@ class StudentAssessmentAttemptRepo(BaseRepo[StudentAssessmentAttempt]):
         )
         result = await db.execute(stmt)
         return result.scalar_one_or_none() is not None
+
+    async def has_attempts(self, assessment_id: int, db: AsyncSession) -> bool:
+        stmt = (
+            select(StudentAssessmentAttempt.id)
+            .where(StudentAssessmentAttempt.student_assessment_id == assessment_id)
+            .limit(1)
+        )
+        return await db.scalar(stmt) is not None
