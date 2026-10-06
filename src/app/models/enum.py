@@ -45,6 +45,10 @@ class AttemptStatus(str, enum.Enum):
     SUBMITTED = "SUBMITTED"
     EVALUATED = "EVALUATED"
 
+class SortOrder(str, enum.Enum):
+    ASC = "asc"
+    DESC = "desc"
+
 class MediaType(str, enum.Enum):
     IMAGE = "IMAGE",
     DOC = "DOC"

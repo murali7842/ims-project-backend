@@ -37,3 +37,14 @@ class Student(Base, Auditable):
     batch: Mapped["Batch"] = relationship("Batch")
     attempts: Mapped[list["StudentAssessmentAttempt"]] = relationship(
         "StudentAssessmentAttempt", back_populates="student")
+
+    def refresh_payment_status(self) -> None:
+        """Recompute balance and payment status from fee_amount and paid_amount"""
+        self.balance_amount = max(self.fee_amount - self.paid_amount, 0)  # no negatives
+
+        if self.paid_amount == 0:
+            self.payment_status = PaymentStatus.UNPAID
+        elif self.paid_amount < self.fee_amount:
+            self.payment_status = PaymentStatus.PARTIALLY_PAID
+        else:
+            self.payment_status = PaymentStatus.PAID
