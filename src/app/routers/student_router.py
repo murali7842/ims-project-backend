@@ -27,6 +27,7 @@ async def update_student(sch: UpdateStudentSch, session: AsyncSession = Depends(
 @student_router.get("/get_all_students", response_model=PaginationResponse[GetStudentSch],
                     name="Get all Students")
 async def get_all_students(search: str | None = None,
+                           institution_id: int | None = None,
                            course_id: int | None = None,
                            batch_id: int | None = None,
                            sort_by: StudentSortBy = StudentSortBy.ID,
@@ -36,7 +37,8 @@ async def get_all_students(search: str | None = None,
                            session: AsyncSession = Depends(get_db),
                            user: User = Depends(get_admin_or_operator),
                            service: StudentService = Depends(get_student_service)):
-    return await service.get_all_students(search, course_id, batch_id, sort_by, sort_order, page, size, session)
+    return await service.get_all_students(user, search, institution_id, course_id, batch_id,
+                                          sort_by, sort_order, page, size, session)
 
 @student_router.get("/{student_id}", response_model=Response[GetStudentSch], name="Get Student Details By ID")
 async def get_student_by_id(student_id: int, session: AsyncSession = Depends(get_db),

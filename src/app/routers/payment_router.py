@@ -27,6 +27,7 @@ async def update_payment(sch: UpdatePaymentSch, session: AsyncSession = Depends(
 @payment_router.get("/get_all_payments", response_model=PaginationResponse[GetPaymentSch],
                     name="Get all Payments")
 async def get_all_payments(search: str | None = None,
+                           institution_id: int | None = None,
                            student_id: int | None = None,
                            sort_by: PaymentSortBy = PaymentSortBy.ID,
                            sort_order: SortOrder = SortOrder.DESC,
@@ -35,7 +36,8 @@ async def get_all_payments(search: str | None = None,
                            session: AsyncSession = Depends(get_db),
                            user: User = Depends(get_admin_or_operator),
                            service: PaymentService = Depends(get_payment_service)):
-    return await service.get_all_payments(search, student_id, sort_by, sort_order, page, size, session)
+    return await service.get_all_payments(user, search, institution_id, student_id,
+                                          sort_by, sort_order, page, size, session)
 
 @payment_router.get("/{payment_id}", response_model=Response[GetPaymentSch], name="Get Payment Details By ID")
 async def get_payment_by_id(payment_id: int, session: AsyncSession = Depends(get_db),

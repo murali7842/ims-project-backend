@@ -17,9 +17,13 @@ class BatchRepo(BaseRepo[Batch]):
             query = query.where(Batch.id != exclude_id)
         return await session.scalar(query.limit(1)) is not None
 
-    async def get_all_batches(self, search: str | None, sort_by: BatchSortBy, sort_order: SortOrder,
+    async def get_all_batches(self, search: str | None, institution_id: int | None,
+                              sort_by: BatchSortBy, sort_order: SortOrder,
                               page: int, size: int, db: AsyncSession) -> tuple[list[Batch], int]:
         query = select(Batch)
+
+        if institution_id is not None:
+            query = query.where(Batch.institution_id == institution_id)
 
         if search:
             search_term = f"%{search.strip()}%"

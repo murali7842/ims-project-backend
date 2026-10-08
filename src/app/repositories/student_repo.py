@@ -20,11 +20,14 @@ class StudentRepo(BaseRepo[Student]):
             query = query.where(Student.id != exclude_id)
         return await db.scalar(query.limit(1))
 
-    async def get_all_students(self, search: str | None, course_id: int | None, batch_id: int | None,
+    async def get_all_students(self, search: str | None, institution_id: int | None,
+                               course_id: int | None, batch_id: int | None,
                                sort_by: StudentSortBy, sort_order: SortOrder,
                                page: int, size: int, db: AsyncSession) -> tuple[list[Student], int]:
         query = select(Student)
 
+        if institution_id is not None:
+            query = query.where(Student.institution_id == institution_id)
         if course_id is not None:
             query = query.where(Student.course_id == course_id)
         if batch_id is not None:

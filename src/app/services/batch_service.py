@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.app.models.enum import SortOrder
 from src.app.schemas.batch_sch import CreateBatchSch, GetBatchSch, UpdateBatchSch, BatchSortBy
+from src.app.models.user import User
 from src.app.shared.response import PaginationResponse
 
 
@@ -16,7 +17,8 @@ class BatchService(ABC):
         pass
 
     @abstractmethod
-    async def get_all_batches(self, search: str | None, sort_by: BatchSortBy, sort_order: SortOrder,
+    async def get_all_batches(self, user: User, search: str | None, institution_id: int | None,
+                              sort_by: BatchSortBy, sort_order: SortOrder,
                               page: int, size: int, db: AsyncSession) -> PaginationResponse[GetBatchSch]:
         pass
 

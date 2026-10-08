@@ -6,7 +6,9 @@ from src.app.repositories.course_repo import CourseRepo
 from src.app.repositories.user_repo import UserRepo
 from src.app.schemas.course_sch import CreateCourseSch, GetCourseSch, UpdateCourseSch, CourseSortBy
 from src.app.services.course_service import CourseService
+from src.app.models.user import User
 from src.app.shared.response import PaginationResponse
+from src.app.utils.institution_scope import resolve_institution_id
 
 
 class CourseServiceImpl(CourseService):
@@ -42,9 +44,13 @@ class CourseServiceImpl(CourseService):
 
         return GetCourseSch.from_entity(course)
 
-    async def get_all_courses(self, search: str | None, sort_by: CourseSortBy, sort_order: SortOrder,
+    async def get_all_courses(self, user: User, search: str | None, institution_id: int | None,
+                              sort_by: CourseSortBy, sort_order: SortOrder,
                               page: int, size: int, db: AsyncSession) -> PaginationResponse[GetCourseSch]:
-        courses, total_elements = await self.course_repo.get_all_courses(search, sort_by, sort_order, page, size, db)
+        # operator always gets own institution courses, admin gets all or the selected institution
+        institution_id = resolve_institution_id(user, institution_id)
+        courses, total_elements = await self.course_repo.get_all_courses(
+            search, institution_id, sort_by, sort_order, page, size, db)
 
         course_list = [GetCourseSch.from_entity(course) for course in courses]
 

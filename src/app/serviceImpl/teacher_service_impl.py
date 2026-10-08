@@ -10,6 +10,7 @@ from src.app.repositories.user_repo import UserRepo
 from src.app.schemas.teacher_sch import CreateTeacherSch, GetTeacherDetailsSch, UpdateTeacherSch
 from src.app.services.teacher_service import TeacherService
 from src.app.shared.response import PaginationResponse
+from src.app.utils.institution_scope import resolve_institution_id
 
 
 class TeacherServiceImpl(TeacherService):
@@ -42,9 +43,11 @@ class TeacherServiceImpl(TeacherService):
         user = await self.user_repo.save(new_user, db)
         return user.id
 
-    async def get_all_teacher(self, search: str | None, page: int, size: int, db: AsyncSession) -> PaginationResponse[GetTeacherDetailsSch]:
-
-        teachers, total_elements = await self.teacher_repo.get_all_teacher(search, page, size, db)
+    async def get_all_teacher(self, user: User, search: str | None, institution_id: int | None,
+                              page: int, size: int, db: AsyncSession) -> PaginationResponse[GetTeacherDetailsSch]:
+        # operator always gets own institution teachers, admin gets all or the selected institution
+        institution_id = resolve_institution_id(user, institution_id)
+        teachers, total_elements = await self.teacher_repo.get_all_teacher(search, institution_id, page, size, db)
 
         teacher_list = [GetTeacherDetailsSch.from_entity(teacher) for teacher in teachers]
 

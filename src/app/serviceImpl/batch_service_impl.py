@@ -5,7 +5,9 @@ from src.app.models.enum import SortOrder
 from src.app.repositories.batch_repo import BatchRepo
 from src.app.schemas.batch_sch import CreateBatchSch, GetBatchSch, UpdateBatchSch, BatchSortBy
 from src.app.services.batch_service import BatchService
+from src.app.models.user import User
 from src.app.shared.response import PaginationResponse
+from src.app.utils.institution_scope import resolve_institution_id
 
 
 class BatchServiceImpl(BatchService):
@@ -40,9 +42,13 @@ class BatchServiceImpl(BatchService):
 
         return GetBatchSch.from_entity(batch)
 
-    async def get_all_batches(self, search: str | None, sort_by: BatchSortBy, sort_order: SortOrder,
+    async def get_all_batches(self, user: User, search: str | None, institution_id: int | None,
+                              sort_by: BatchSortBy, sort_order: SortOrder,
                               page: int, size: int, db: AsyncSession) -> PaginationResponse[GetBatchSch]:
-        batches, total_elements = await self.batch_repo.get_all_batches(search, sort_by, sort_order, page, size, db)
+        # operator always gets own institution batches, admin gets all or the selected institution
+        institution_id = resolve_institution_id(user, institution_id)
+        batches, total_elements = await self.batch_repo.get_all_batches(
+            search, institution_id, sort_by, sort_order, page, size, db)
 
         batch_list = [GetBatchSch.from_entity(batch) for batch in batches]
 

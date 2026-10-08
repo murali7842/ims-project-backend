@@ -9,7 +9,9 @@ from src.app.repositories.student_repo import StudentRepo
 from src.app.repositories.user_repo import UserRepo
 from src.app.schemas.payment_sch import CreatePaymentSch, GetPaymentSch, UpdatePaymentSch, PaymentSortBy
 from src.app.services.payment_service import PaymentService
+from src.app.models.user import User
 from src.app.shared.response import PaginationResponse
+from src.app.utils.institution_scope import resolve_institution_id
 
 
 
@@ -50,11 +52,14 @@ class PaymentServiceImpl(PaymentService):
 
         return GetPaymentSch.from_entity(payment)
 
-    async def get_all_payments(self, search: str | None, student_id: int | None,
+    async def get_all_payments(self, user: User, search: str | None, institution_id: int | None,
+                               student_id: int | None,
                                sort_by: PaymentSortBy, sort_order: SortOrder,
                                page: int, size: int, db: AsyncSession) -> PaginationResponse[GetPaymentSch]:
+        # operator always gets own institution payments, admin gets all or the selected institution
+        institution_id = resolve_institution_id(user, institution_id)
         payments, total_elements = await self.payment_repo.get_all_payments(
-            search, student_id, sort_by, sort_order, page, size, db)
+            search, institution_id, student_id, sort_by, sort_order, page, size, db)
 
         payment_list = [GetPaymentSch.from_entity(payment) for payment in payments]
 

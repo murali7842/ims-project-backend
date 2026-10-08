@@ -20,6 +20,7 @@ async def create_batch(sch: CreateBatchSch, session: AsyncSession = Depends(get_
 
 @batch_router.get("/get_all_batches", response_model=PaginationResponse[GetBatchSch], name="Get all Batches")
 async def get_all_batches(search: str | None = None,
+                          institution_id: int | None = None,
                           sort_by: BatchSortBy = BatchSortBy.ID,
                           sort_order: SortOrder = SortOrder.DESC,
                           page: int = Query(1, ge=1),
@@ -27,7 +28,7 @@ async def get_all_batches(search: str | None = None,
                           session: AsyncSession = Depends(get_db),
                           user: User = Depends(get_admin_or_operator),
                           service: BatchService = Depends(get_batch_service)):
-    return await service.get_all_batches(search, sort_by, sort_order, page, size, session)
+    return await service.get_all_batches(user, search, institution_id, sort_by, sort_order, page, size, session)
 
 @batch_router.get("/{batch_id}", response_model=Response[GetBatchSch], name="Get Batch Details By ID")
 async def get_batch_by_id(batch_id: int,

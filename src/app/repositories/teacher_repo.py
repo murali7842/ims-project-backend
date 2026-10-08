@@ -12,11 +12,15 @@ class TeacherRepo(BaseRepo[User]):
     def __init__(self):
         super().__init__(User)
 
-    async def get_all_teacher(self, search: str | None, page: int, size: int, db: AsyncSession):
+    async def get_all_teacher(self, search: str | None, institution_id: int | None,
+                              page: int, size: int, db: AsyncSession):
         query = (
             select(User)
             .options(selectinload(User.institution))
             .where(User.role == UserRole.TEACHER))
+
+        if institution_id is not None:
+            query = query.where(User.institution_id == institution_id)
 
         if search:
             search_term = f"%{search.strip()}%"

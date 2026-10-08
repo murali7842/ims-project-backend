@@ -9,7 +9,9 @@ from src.app.repositories.student_repo import StudentRepo
 from src.app.repositories.user_repo import UserRepo
 from src.app.schemas.student_sch import CreateStudentSch, GetStudentSch, UpdateStudentSch, StudentSortBy
 from src.app.services.student_service import StudentService
+from src.app.models.user import User
 from src.app.shared.response import PaginationResponse
+from src.app.utils.institution_scope import resolve_institution_id
 
 
 class StudentServiceImpl(StudentService):
@@ -57,11 +59,14 @@ class StudentServiceImpl(StudentService):
 
         return GetStudentSch.from_entity(student)
 
-    async def get_all_students(self, search: str | None, course_id: int | None, batch_id: int | None,
+    async def get_all_students(self, user: User, search: str | None, institution_id: int | None,
+                               course_id: int | None, batch_id: int | None,
                                sort_by: StudentSortBy, sort_order: SortOrder,
                                page: int, size: int, db: AsyncSession) -> PaginationResponse[GetStudentSch]:
+        # operator always gets own institution students, admin gets all or the selected institution
+        institution_id = resolve_institution_id(user, institution_id)
         students, total_elements = await self.student_repo.get_all_students(
-            search, course_id, batch_id, sort_by, sort_order, page, size, db)
+            search, institution_id, course_id, batch_id, sort_by, sort_order, page, size, db)
 
         student_list = [GetStudentSch.from_entity(student) for student in students]
 

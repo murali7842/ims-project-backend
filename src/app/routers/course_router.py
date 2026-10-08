@@ -20,6 +20,7 @@ async def create_course(sch: CreateCourseSch, session: AsyncSession = Depends(ge
 
 @course_router.get("/get_all_courses", response_model=PaginationResponse[GetCourseSch], name="Get all Courses")
 async def get_all_courses(search: str | None = None,
+                          institution_id: int | None = None,
                           sort_by: CourseSortBy = CourseSortBy.ID,
                           sort_order: SortOrder = SortOrder.DESC,
                           page: int = Query(1, ge=1),
@@ -27,7 +28,7 @@ async def get_all_courses(search: str | None = None,
                           session: AsyncSession = Depends(get_db),
                           user: User = Depends(get_admin_or_operator),
                           service: CourseService = Depends(get_course_service)):
-    return await service.get_all_courses(search, sort_by, sort_order, page, size, session)
+    return await service.get_all_courses(user, search, institution_id, sort_by, sort_order, page, size, session)
 
 @course_router.get("/{course_id}", response_model=Response[GetCourseSch], name="Get Course Details By ID")
 async def get_course_by_id(course_id: int,
