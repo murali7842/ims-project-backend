@@ -1,6 +1,7 @@
 from src.app.repositories.assessment_institution_publish_repo import AssessmentInstitutionPublishRepo
 from src.app.repositories.batch_repo import BatchRepo
 from src.app.repositories.course_repo import CourseRepo
+from src.app.repositories.dashboard_repo import DashboardRepo
 from src.app.repositories.institution_repo import InstitutionRepo
 from src.app.repositories.operator_repo import OperatorRepo
 from src.app.repositories.otp_record_repo import OTPRecordRepo
@@ -56,3 +57,6 @@ def get_assessment_institution_publish_repo() -> AssessmentInstitutionPublishRep
 
 def get_assessment_attempt_repo() -> StudentAssessmentAttemptRepo:
     return StudentAssessmentAttemptRepo()
+
+def get_dashboard_repo() -> DashboardRepo:
+    return DashboardRepo()

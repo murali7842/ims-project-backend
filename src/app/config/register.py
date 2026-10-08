@@ -9,6 +9,7 @@ from src.app.config.setting import get_setting
 from src.app.routers.auth_router import authRouter
 from src.app.routers.batch_router import batch_router
 from src.app.routers.course_router import course_router
+from src.app.routers.dashboard_router import dashboard_router
 from src.app.routers.institution_router import institution_router
 from src.app.routers.operator_router import operator_router
 from src.app.routers.payment_router import payment_router
@@ -116,6 +117,11 @@ def register_router(app: FastAPI):
         student_assessment_router,
         prefix=f"{setting.API_V1_PREFIX}/student_assessment",
         tags=["StudentAssessment"]
+    )
+    app.include_router(
+        dashboard_router,
+        prefix=f"{setting.API_V1_PREFIX}/dashboard",
+        tags=["Dashboard"]
     )
 
 

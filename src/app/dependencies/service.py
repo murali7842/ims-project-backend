@@ -3,11 +3,12 @@ from fastapi import Depends
 from src.app.dependencies.repo import get_institution_repo, get_user_repo, get_otp_repo, get_operator_repo, \
     get_teacher_repo, get_course_repo, get_batch_repo, get_student_repo, get_payment_repo, get_student_assessment_repo, \
     get_student_assessment_question_repo, get_student_assessment_question_option_repo, \
-    get_assessment_institution_publish_repo, get_assessment_attempt_repo
+    get_assessment_institution_publish_repo, get_assessment_attempt_repo, get_dashboard_repo
 from src.app.models.institution import Institution
 from src.app.repositories.assessment_institution_publish_repo import AssessmentInstitutionPublishRepo
 from src.app.repositories.batch_repo import BatchRepo
 from src.app.repositories.course_repo import CourseRepo
+from src.app.repositories.dashboard_repo import DashboardRepo
 from src.app.repositories.institution_repo import InstitutionRepo
 from src.app.repositories.operator_repo import OperatorRepo
 from src.app.repositories.otp_record_repo import OTPRecordRepo
@@ -22,6 +23,7 @@ from src.app.repositories.user_repo import UserRepo
 from src.app.serviceImpl.auth_service_impl import AuthServiceImpl
 from src.app.serviceImpl.batch_service_impl import BatchServiceImpl
 from src.app.serviceImpl.course_service_impl import CourseServiceImpl
+from src.app.serviceImpl.dashboard_service_impl import DashboardServiceImpl
 from src.app.serviceImpl.institution_service_impl import InstitutionServiceImpl
 from src.app.serviceImpl.operator_service_impl import OperatorServiceImpl
 from src.app.serviceImpl.payment_service_impl import PaymentServiceImpl
@@ -32,6 +34,7 @@ from src.app.serviceImpl.user_service_impl import UserServiceImpl
 from src.app.services.auth_service import AuthService
 from src.app.services.batch_service import BatchService
 from src.app.services.course_service import CourseService
+from src.app.services.dashboard_service import DashboardService
 from src.app.services.institution_service import InstitutionService
 from src.app.services.operator_service import OperatorService
 from src.app.services.payment_service import PaymentService
@@ -110,3 +113,7 @@ def get_student_assessment_service(
     return StudentAssessmentServiceImpl(student_assessment_repo, student_assessment_question_repo,
                                         student_assessment_question_option_repo, assessment_institution_publish_repo,institution_repo,
                                         student_assessment_attempt_repo)
+
+def get_dashboard_service(dashboard_repo: DashboardRepo = Depends(get_dashboard_repo)
+                          ) -> DashboardService:
+    return DashboardServiceImpl(dashboard_repo)
