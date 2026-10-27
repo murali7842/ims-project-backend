@@ -25,8 +25,13 @@ log = logging.getLogger()
 @asynccontextmanager
 async def register_init(app: FastAPI):
     log.info(setting.DATABASE_URL)
-    await init_models()
-    print("Sample")
+    try:
+        await init_models()
+        print("Database models initialized successfully.")
+    except Exception as e:
+        log.error(f"Failed to connect to database or initialize models: {e}")
+        print(f"Database connection warning: {e}")
+        print("Please check your DATABASE_URL in Render environment variables.")
     yield
 
 
@@ -123,9 +128,3 @@ def register_router(app: FastAPI):
         prefix=f"{setting.API_V1_PREFIX}/dashboard",
         tags=["Dashboard"]
     )
-
-
-
-
-
-

@@ -6,11 +6,25 @@ from src.app.config.setting import get_setting
 
 setting = get_setting()
 
+
+def get_async_database_url(url: str) -> str:
+    if not url:
+        return url
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+asyncpg://", 1)
+    if url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
+
+
 class Base(DeclarativeBase, AsyncAttrs):
     pass
 
+
+db_url = get_async_database_url(setting.DATABASE_URL)
+
 engine = create_async_engine(
-    setting.DATABASE_URL,
+    db_url,
     poolclass=AsyncAdaptedQueuePool,
     pool_size=10,
     max_overflow=20,
