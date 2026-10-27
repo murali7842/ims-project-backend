@@ -66,16 +66,17 @@ class Settings(BaseSettings):
     ORGANIZATION_NAME: str = 'Young Innovators Academy'
 
 
-
 # make an entry here if you are creating new env
 config = dict(
     dev='src/resource/env/dev.env',
-
 )
-
-
 
 
 @lru_cache
 def get_setting() -> Settings:
-    return Settings(_env_file=("src/resource/env/.env", config[os.environ.get('ENV', 'dev').lower()]))
+    env_name = os.environ.get('ENV', 'dev').lower()
+    env_file = config.get(env_name, config['dev'])
+    return Settings(_env_file=("src/resource/env/.env", env_file))
+
+
+setting = get_setting()
