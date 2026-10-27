@@ -3,7 +3,8 @@ from abc import ABC, abstractmethod
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.models.user import User
-from src.app.schemas.dashboard_sch import DashboardSummarySch, RoleCountSch, RecentInstitutionSch, RecentUserSch
+from src.app.schemas.dashboard_sch import DashboardSummarySch, RoleCountSch, RecentInstitutionSch, RecentUserSch, \
+    TeacherDashboardSch
 from src.app.schemas.institution_sch import InstitutionDropDown
 
 
@@ -25,6 +26,10 @@ class DashboardService(ABC):
     @abstractmethod
     async def get_recent_institutions(self, user: User, institution_id: int | None, limit: int,
                                       db: AsyncSession) -> list[RecentInstitutionSch]:
+        pass
+
+    @abstractmethod
+    async def get_teacher_dashboard(self, user: User, db: AsyncSession) -> TeacherDashboardSch:
         pass
 
     @abstractmethod

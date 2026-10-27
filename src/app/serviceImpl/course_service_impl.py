@@ -4,11 +4,11 @@ from src.app.models.course import Course
 from src.app.models.enum import SortOrder
 from src.app.repositories.course_repo import CourseRepo
 from src.app.repositories.user_repo import UserRepo
-from src.app.schemas.course_sch import CreateCourseSch, GetCourseSch, UpdateCourseSch, CourseSortBy
+from src.app.schemas.course_sch import CreateCourseSch, GetCourseSch, CourseDetailSch, UpdateCourseSch, CourseSortBy
 from src.app.services.course_service import CourseService
 from src.app.models.user import User
 from src.app.shared.response import PaginationResponse
-from src.app.utils.institution_scope import resolve_institution_id
+from src.app.utils.institution_scope import resolve_institution_id, resolve_teacher_id, ensure_teacher_owns
 
 
 class CourseServiceImpl(CourseService):
@@ -37,20 +37,24 @@ class CourseServiceImpl(CourseService):
         course = await self.course_repo.save(new_course, db)
         return course.id
 
-    async def get_course_by_id(self, course_id: int, db: AsyncSession) -> GetCourseSch:
-        course = await self.course_repo.get(course_id, db)
-        if not course:
+    async def get_course_by_id(self, user: User, course_id: int, db: AsyncSession) -> CourseDetailSch:
+        row = await self.course_repo.get_course_details(course_id, db)
+        if not row:
             raise errors.HTTPError(code=404, msg=f"Course with id {course_id} not found!")
+        ensure_teacher_owns(user, row.Course.teacher_id, "courses")
 
-        return GetCourseSch.from_entity(course)
+        batch_rows = await self.course_repo.get_batches_with_student_count(course_id, db)
+        return CourseDetailSch.from_entity(row.Course, row.institution_name, row.teacher_name, batch_rows)
 
     async def get_all_courses(self, user: User, search: str | None, institution_id: int | None,
                               sort_by: CourseSortBy, sort_order: SortOrder,
                               page: int, size: int, db: AsyncSession) -> PaginationResponse[GetCourseSch]:
         # operator always gets own institution courses, admin gets all or the selected institution
         institution_id = resolve_institution_id(user, institution_id)
+        # teacher gets only the courses they teach
+        teacher_id = resolve_teacher_id(user)
         courses, total_elements = await self.course_repo.get_all_courses(
-            search, institution_id, sort_by, sort_order, page, size, db)
+            search, institution_id, teacher_id, sort_by, sort_order, page, size, db)
 
         course_list = [GetCourseSch.from_entity(course) for course in courses]
 

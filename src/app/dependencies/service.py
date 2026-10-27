@@ -107,12 +107,13 @@ def get_student_assessment_service(
         assessment_institution_publish_repo: AssessmentInstitutionPublishRepo = Depends(get_assessment_institution_publish_repo),
         institution_repo: InstitutionRepo = Depends(get_institution_repo),
         # student_repo: StudentRepo = Depends(get_student_repo),
-        student_assessment_attempt_repo: StudentAssessmentAttemptRepo = Depends(get_assessment_attempt_repo)
+        student_assessment_attempt_repo: StudentAssessmentAttemptRepo = Depends(get_assessment_attempt_repo),
+        course_repo: CourseRepo = Depends(get_course_repo)
 
 ) -> StudentAssessmentService:
     return StudentAssessmentServiceImpl(student_assessment_repo, student_assessment_question_repo,
                                         student_assessment_question_option_repo, assessment_institution_publish_repo,institution_repo,
-                                        student_assessment_attempt_repo)
+                                        student_assessment_attempt_repo, course_repo)
 
 def get_dashboard_service(dashboard_repo: DashboardRepo = Depends(get_dashboard_repo)
                           ) -> DashboardService:

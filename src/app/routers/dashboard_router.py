@@ -4,9 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.app.dependencies.db import get_db
 from src.app.dependencies.service import get_dashboard_service
 from src.app.models.user import User
-from src.app.schemas.dashboard_sch import DashboardSummarySch, RoleCountSch, RecentInstitutionSch, RecentUserSch
+from src.app.schemas.dashboard_sch import DashboardSummarySch, RoleCountSch, RecentInstitutionSch, RecentUserSch, \
+    TeacherDashboardSch
 from src.app.schemas.institution_sch import InstitutionDropDown
-from src.app.serviceImpl.auth_service_impl import get_admin_or_operator
+from src.app.serviceImpl.auth_service_impl import get_admin_or_operator, get_teacher
 from src.app.services.dashboard_service import DashboardService
 from src.app.shared.response import Response
 
@@ -21,6 +22,12 @@ async def get_institution_dropdown(user: User = Depends(get_admin_or_operator),
                                    service: DashboardService = Depends(get_dashboard_service),
                                    db: AsyncSession = Depends(get_db)):
     return Response[list[InstitutionDropDown]](body=await service.get_institution_dropdown(user, db))
+
+@dashboard_router.get("/teacher", response_model=Response[TeacherDashboardSch], name="Teacher Dashboard")
+async def get_teacher_dashboard(user: User = Depends(get_teacher),
+                                service: DashboardService = Depends(get_dashboard_service),
+                                db: AsyncSession = Depends(get_db)):
+    return Response[TeacherDashboardSch](body=await service.get_teacher_dashboard(user, db))
 
 @dashboard_router.get("/summary", response_model=Response[DashboardSummarySch], name="Dashboard Summary Cards")
 async def get_summary(institution_id: int | None = None,

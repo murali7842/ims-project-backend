@@ -4,8 +4,8 @@ from src.app.dependencies.db import get_db
 from src.app.dependencies.service import get_batch_service
 from src.app.models.enum import SortOrder
 from src.app.models.user import User
-from src.app.schemas.batch_sch import CreateBatchSch, GetBatchSch, UpdateBatchSch, BatchSortBy
-from src.app.serviceImpl.auth_service_impl import get_admin_or_operator
+from src.app.schemas.batch_sch import CreateBatchSch, GetBatchSch, BatchDetailSch, UpdateBatchSch, BatchSortBy
+from src.app.serviceImpl.auth_service_impl import get_admin_or_operator, get_admin_operator_or_teacher
 from src.app.services.batch_service import BatchService
 from src.app.shared.response import Response, PaginationResponse
 
@@ -26,16 +26,16 @@ async def get_all_batches(search: str | None = None,
                           page: int = Query(1, ge=1),
                           size: int = Query(10, ge=1, le=100),
                           session: AsyncSession = Depends(get_db),
-                          user: User = Depends(get_admin_or_operator),
+                          user: User = Depends(get_admin_operator_or_teacher),
                           service: BatchService = Depends(get_batch_service)):
     return await service.get_all_batches(user, search, institution_id, sort_by, sort_order, page, size, session)
 
-@batch_router.get("/{batch_id}", response_model=Response[GetBatchSch], name="Get Batch Details By ID")
+@batch_router.get("/{batch_id}", response_model=Response[BatchDetailSch], name="Get Batch Details By ID")
 async def get_batch_by_id(batch_id: int,
                           session: AsyncSession = Depends(get_db),
-                          user: User = Depends(get_admin_or_operator),
+                          user: User = Depends(get_admin_operator_or_teacher),
                           service: BatchService = Depends(get_batch_service)):
-    return Response[GetBatchSch](body=await service.get_batch_by_id(batch_id, session))
+    return Response[BatchDetailSch](body=await service.get_batch_by_id(user, batch_id, session))
 
 @batch_router.patch("/{batch_id}", response_model=Response[str], name="Update Batch")
 async def update_batch(batch_id: int, sch: UpdateBatchSch,

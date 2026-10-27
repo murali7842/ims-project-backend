@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,7 +6,9 @@ from src.app.common.exception import errors
 from src.app.models.enum import UserRole
 from src.app.models.user import User
 from src.app.repositories.dashboard_repo import DashboardRepo
-from src.app.schemas.dashboard_sch import DashboardSummarySch, RoleCountSch, RecentInstitutionSch, RecentUserSch
+from src.app.schemas.base import DropDownSch
+from src.app.schemas.dashboard_sch import DashboardSummarySch, RoleCountSch, RecentInstitutionSch, RecentUserSch, \
+    TeacherDashboardSch, TeacherBatchSch, TeacherExamSch
 from src.app.schemas.institution_sch import InstitutionDropDown
 from src.app.services.dashboard_service import DashboardService
 from src.app.utils.institution_scope import resolve_institution_id
@@ -55,6 +57,31 @@ class DashboardServiceImpl(DashboardService):
         users = await self.dashboard_repo.get_recent_users(institution_id, limit, db)
         return [RecentUserSch(id=user.id, name=user.name, email=user.email, role=user.role,
                               created_at=user.created_at) for user in users]
+
+    async def get_teacher_dashboard(self, user: User, db: AsyncSession) -> TeacherDashboardSch:
+        counts = await self.dashboard_repo.get_teacher_summary_counts(user.id, date.today(), db)
+        batch_rows = await self.dashboard_repo.get_teacher_batches(user.id, db)
+        exam_rows = await self.dashboard_repo.get_teacher_recent_exams(user.id, 5, db)
+
+        batches = [
+            TeacherBatchSch(
+                id=row.Batch.id,
+                name=row.Batch.name,
+                course=DropDownSch.of(row.Batch.course_id, row.course_name),
+                timing=row.Batch.timing,
+                mode=row.Batch.mode,
+                start_date=row.Batch.start_date,
+                end_date=row.Batch.end_date,
+                student_limit=row.Batch.student_limit,
+                total_students=row.total_students
+            ) for row in batch_rows
+        ]
+        exams = [
+            TeacherExamSch(id=row.id, title=row.title, status=row.status, start_date=row.start_date,
+                           end_date=row.end_date, course=DropDownSch.of(row.course_id, row.course_name))
+            for row in exam_rows
+        ]
+        return TeacherDashboardSch(**counts, batches=batches, recent_exams=exams)
 
     @staticmethod
     def _get_date_range(year: int | None, month: int | None) -> tuple[datetime | None, datetime | None]:

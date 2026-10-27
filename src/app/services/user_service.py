@@ -3,7 +3,8 @@ from abc import ABC, abstractmethod
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.models.enum import UserRole, SortOrder
-from src.app.schemas.user_sch import UserRegSch, GetUserSch, UpdateUserSch, UserSortBy
+from src.app.models.user import User
+from src.app.schemas.user_sch import UserRegSch, GetUserSch, UpdateUserSch, UserSortBy, UpdateProfileSch
 from src.app.shared.response import PaginationResponse
 
 
@@ -25,6 +26,14 @@ class UserService(ABC):
 
     @abstractmethod
     async def update_user(self, sch: UpdateUserSch, db: AsyncSession) -> str:
+        pass
+
+    @abstractmethod
+    async def get_my_profile(self, user: User, db: AsyncSession) -> GetUserSch:
+        pass
+
+    @abstractmethod
+    async def update_my_profile(self, user: User, sch: UpdateProfileSch, db: AsyncSession) -> str:
         pass
 
     @abstractmethod

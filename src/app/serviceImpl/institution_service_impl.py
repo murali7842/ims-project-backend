@@ -4,7 +4,7 @@ from src.app.common.exception import errors
 from src.app.models.enum import SortOrder
 from src.app.models.institution import Institution
 from src.app.repositories.institution_repo import InstitutionRepo
-from src.app.schemas.institution_sch import InstitutionCreateSch, InstitutionSch, InstitutionUpdateSch, \
+from src.app.schemas.institution_sch import InstitutionCreateSch, InstitutionSch, InstitutionDetailSch, InstitutionUpdateSch, \
     InstitutionSortBy
 from src.app.services.institution_service import InstitutionService
 from src.app.shared.response import PaginationResponse
@@ -28,12 +28,13 @@ class InstitutionServiceImpl(InstitutionService):
         institution = await self.institution_repo.save(institution, db)
         return InstitutionSch.from_entity(institution)
 
-    async def get_institution_by_id(self, institution_id: int, db: AsyncSession) -> InstitutionSch:
-        institution = await self.institution_repo.get(institution_id, db)
-        if not institution:
+    async def get_institution_by_id(self, institution_id: int, db: AsyncSession) -> InstitutionDetailSch:
+        details = await self.institution_repo.get_institution_details(institution_id, db)
+        if not details:
             raise errors.HTTPError(code=404, msg=f"Institution with id {institution_id} not found!")
 
-        return InstitutionSch.from_entity(institution)
+        course_batch_rows = await self.institution_repo.get_institution_courses_with_batches(institution_id, db)
+        return InstitutionDetailSch.build(details, course_batch_rows)
 
     async def get_all_institutions(self, search: str | None, sort_by: InstitutionSortBy, sort_order: SortOrder,
                                    page: int, size: int, db: AsyncSession) -> PaginationResponse[InstitutionSch]:

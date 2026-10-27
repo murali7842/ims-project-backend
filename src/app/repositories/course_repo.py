@@ -1,7 +1,11 @@
 from sqlalchemy import select, func, or_, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.app.models.batch import Batch
 from src.app.models.course import Course
+from src.app.models.institution import Institution
+from src.app.models.student import Student
+from src.app.models.user import User
 from src.app.models.enum import SortOrder
 from src.app.repositories.base import BaseRepo
 from src.app.schemas.course_sch import CourseSortBy
@@ -18,13 +22,15 @@ class CourseRepo(BaseRepo[Course]):
             query = query.where(Course.id != exclude_id)
         return await session.scalar(query.limit(1)) is not None
 
-    async def get_all_courses(self, search: str | None, institution_id: int | None,
+    async def get_all_courses(self, search: str | None, institution_id: int | None, teacher_id: int | None,
                               sort_by: CourseSortBy, sort_order: SortOrder,
                               page: int, size: int, db: AsyncSession) -> tuple[list[Course], int]:
         query = select(Course)
 
         if institution_id is not None:
             query = query.where(Course.institution_id == institution_id)
+        if teacher_id is not None:
+            query = query.where(Course.teacher_id == teacher_id)
 
         if search:
             search_term = f"%{search.strip()}%"
@@ -57,3 +63,30 @@ class CourseRepo(BaseRepo[Course]):
         result = await db.execute(update(Course).where(Course.id == course_id).values(**data))
         await db.commit()
         return result.rowcount > 0
+
+    async def get_course_details(self, course_id: int, db: AsyncSession):
+        """Course with institution and teacher names in a single query"""
+        query = (
+            select(Course, Institution.name.label("institution_name"), User.name.label("teacher_name"))
+            .outerjoin(Institution, Course.institution_id == Institution.id)
+            .outerjoin(User, Course.teacher_id == User.id)
+            .where(Course.id == course_id)
+        )
+        result = await db.execute(query)
+        return result.first()
+
+    async def get_course_ids_by_teacher(self, teacher_id: int, db: AsyncSession) -> set[int]:
+        result = await db.execute(select(Course.id).where(Course.teacher_id == teacher_id))
+        return set(result.scalars().all())
+
+    async def get_batches_with_student_count(self, course_id: int, db: AsyncSession):
+        """All batches of a course with enrolled student count per batch (one GROUP BY query)"""
+        query = (
+            select(Batch, func.count(Student.id).label("total_students"))
+            .outerjoin(Student, Student.batch_id == Batch.id)
+            .where(Batch.course_id == course_id)
+            .group_by(Batch.id)
+            .order_by(Batch.id)
+        )
+        result = await db.execute(query)
+        return result.all()

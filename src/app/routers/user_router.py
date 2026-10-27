@@ -4,8 +4,8 @@ from src.app.dependencies.db import get_db
 from src.app.dependencies.service import get_user_service
 from src.app.models.enum import UserRole, SortOrder
 from src.app.models.user import User
-from src.app.schemas.user_sch import UserRegSch, GetUserSch, UpdateUserSch, UserSortBy
-from src.app.serviceImpl.auth_service_impl import get_admin
+from src.app.schemas.user_sch import UserRegSch, GetUserSch, UpdateUserSch, UserSortBy, UpdateProfileSch
+from src.app.serviceImpl.auth_service_impl import get_admin, get_current_active_user
 from src.app.services.user_service import UserService
 from src.app.shared.response import Response, PaginationResponse
 
@@ -15,6 +15,19 @@ user_router = APIRouter()
 @user_router.post("/register", response_model=Response[int], name="User Registration")
 async def reg_user(sch: UserRegSch, session: AsyncSession = Depends(get_db), service: UserService = Depends(get_user_service)):
     return Response[int](body=await service.reg_user(sch, session))
+
+# "/me" routes must stay above "/{user_id}" so "me" is not parsed as a user id
+@user_router.get("/me", response_model=Response[GetUserSch], name="Get My Profile")
+async def get_my_profile(session: AsyncSession = Depends(get_db),
+                         user: User = Depends(get_current_active_user),
+                         service: UserService = Depends(get_user_service)):
+    return Response[GetUserSch](body=await service.get_my_profile(user, session))
+
+@user_router.put("/me", response_model=Response[str], name="Update My Profile")
+async def update_my_profile(sch: UpdateProfileSch, session: AsyncSession = Depends(get_db),
+                            user: User = Depends(get_current_active_user),
+                            service: UserService = Depends(get_user_service)):
+    return Response[str](body=await service.update_my_profile(user, sch, session))
 
 @user_router.put("", response_model=Response[str], name="Update User")
 async def update_user(sch: UpdateUserSch, session: AsyncSession = Depends(get_db),

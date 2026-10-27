@@ -1,9 +1,10 @@
-from datetime import datetime
+from datetime import datetime, date
 
 from pydantic import BaseModel
 
-from src.app.models.enum import UserRole
+from src.app.models.enum import UserRole, BatchMode, PublishStatus
 from src.app.models.institution import Institution
+from src.app.schemas.base import DropDownSch
 
 
 class DashboardSummarySch(BaseModel):
@@ -40,3 +41,33 @@ class RecentUserSch(BaseModel):
     email: str
     role: UserRole
     created_at: datetime | None
+
+
+class TeacherBatchSch(BaseModel):
+    id: int
+    name: str
+    course: DropDownSch | None
+    timing: str
+    mode: BatchMode
+    start_date: date
+    end_date: date
+    student_limit: int
+    total_students: int
+
+
+class TeacherExamSch(BaseModel):
+    id: int
+    title: str
+    status: PublishStatus
+    start_date: date | None
+    end_date: date | None
+    course: DropDownSch | None
+
+
+class TeacherDashboardSch(BaseModel):
+    total_courses: int
+    total_batches: int
+    total_students: int
+    upcoming_exams: int
+    batches: list[TeacherBatchSch]
+    recent_exams: list[TeacherExamSch]

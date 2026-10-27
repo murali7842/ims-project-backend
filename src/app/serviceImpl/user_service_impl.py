@@ -5,7 +5,7 @@ from src.app.config.security import get_password_hash
 from src.app.models.enum import UserRole, SortOrder
 from src.app.models.user import User
 from src.app.repositories.user_repo import UserRepo
-from src.app.schemas.user_sch import UserRegSch, GetUserSch, UpdateUserSch, UserSortBy
+from src.app.schemas.user_sch import UserRegSch, GetUserSch, UpdateUserSch, UserSortBy, UpdateProfileSch
 from src.app.services.user_service import UserService
 from src.app.shared.response import PaginationResponse
 
@@ -70,6 +70,14 @@ class UserServiceImpl(UserService):
         user.address = sch.address
         await self.user_repo.save(user, db)
         return "User updated successfully"
+
+    async def get_my_profile(self, user: User, db: AsyncSession) -> GetUserSch:
+        return await self.get_user_by_id(user.id, db)
+
+    async def update_my_profile(self, user: User, sch: UpdateProfileSch, db: AsyncSession) -> str:
+        # id always comes from the token, so a user can only edit their own profile
+        await self.update_user(UpdateUserSch(id=user.id, **sch.model_dump()), db)
+        return "Profile updated successfully"
 
     async def delete_user(self, user_id: int, current_user_id: int, db: AsyncSession) -> str:
         if user_id == current_user_id:
