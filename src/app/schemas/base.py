@@ -133,3 +133,13 @@ CUSTOM_USAGE_ERROR_MESSAGES = {
 
 class SchemaBase(BaseModel):
     model_config = ConfigDict(use_enum_values=True, arbitrary_types_allowed=True, from_attributes=True)
+
+
+class DropDownSch(BaseModel):
+    id: int
+    name: str
+
+    @staticmethod
+    def of(id: int | None, name: str | None) -> "DropDownSch | None":
+        """None when the related row is missing, so optional relations serialize as null"""
+        return DropDownSch(id=id, name=name) if id is not None and name is not None else None

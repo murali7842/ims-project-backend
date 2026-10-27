@@ -3,7 +3,8 @@ from abc import ABC, abstractmethod
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.models.enum import SortOrder
-from src.app.schemas.course_sch import CreateCourseSch, GetCourseSch, UpdateCourseSch, CourseSortBy
+from src.app.schemas.course_sch import CreateCourseSch, GetCourseSch, CourseDetailSch, UpdateCourseSch, CourseSortBy
+from src.app.models.user import User
 from src.app.shared.response import PaginationResponse
 
 
@@ -14,11 +15,12 @@ class CourseService(ABC):
         pass
 
     @abstractmethod
-    async def get_course_by_id(self, course_id : int, db : AsyncSession) -> GetCourseSch:
+    async def get_course_by_id(self, user: User, course_id: int, db: AsyncSession) -> CourseDetailSch:
         pass
 
     @abstractmethod
-    async def get_all_courses(self, search: str | None, sort_by: CourseSortBy, sort_order: SortOrder,
+    async def get_all_courses(self, user: User, search: str | None, institution_id: int | None,
+                              sort_by: CourseSortBy, sort_order: SortOrder,
                               page: int, size: int, db: AsyncSession) -> PaginationResponse[GetCourseSch]:
         pass
 

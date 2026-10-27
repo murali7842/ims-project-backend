@@ -2,6 +2,7 @@ from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.app.models.course import Course
 from src.app.models.enum import PublishStatus, SortOrder
 from src.app.models.student_assessment import StudentAssessment, StudentAssessmentSection, \
     StudentAssessmentQuestion, AssessmentInstitutionPublish
@@ -29,9 +30,22 @@ class StudentAssessmentRepo(BaseRepo[StudentAssessment]):
         return await db.scalar(query)
 
     async def get_all_assessments(self, search: str | None, status: PublishStatus | None, course_id: int | None,
+                                  teacher_id: int | None,
                                   sort_by: StudentAssessmentSortBy, sort_order: SortOrder,
                                   page: int, size: int, db: AsyncSession) -> tuple[list[StudentAssessment], int]:
         query = select(StudentAssessment)
+
+        if teacher_id is not None:
+            # only exams published to a course this teacher teaches
+            query = query.where(
+                select(AssessmentInstitutionPublish.id)
+                .join(Course, Course.id == AssessmentInstitutionPublish.course_id)
+                .where(
+                    AssessmentInstitutionPublish.assessment_id == StudentAssessment.id,
+                    Course.teacher_id == teacher_id
+                )
+                .exists()
+            )
 
         if status is not None:
             query = query.where(StudentAssessment.status == status)

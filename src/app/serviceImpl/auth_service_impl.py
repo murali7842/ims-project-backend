@@ -44,10 +44,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSe
         raise errors.AuthorizationError(msg="User not found")
     return user
 
-async def create_tokens(user_id: int, email: str) -> TokenSch:
-    access_token = create_access_token(user_id, email)
-    refresh_token = create_refresh_token(user_id, email)
-    return TokenSch(access_token=access_token, refresh_token=refresh_token)
+async def create_tokens(user: User) -> TokenSch:
+    # role/name/institution_id in the access token let the frontend pick the right menu without an extra call
+    access_token = create_access_token(user.id, user.email, user.role.value, user.name, user.institution_id)
+    refresh_token = create_refresh_token(user.id, user.email)
+    return TokenSch(access_token=access_token, refresh_token=refresh_token, role=user.role)
 
 async def get_current_active_user(current_user: User = Depends(get_current_user)):
     return current_user
@@ -60,6 +61,16 @@ async def get_admin(user: User = Depends(get_current_active_user)):
 
 async def get_admin_or_operator(user: User = Depends(get_current_active_user)):
     if user.role not in [UserRole.ADMIN, UserRole.OPERATOR]:
+        raise errors.ForbiddenError(msg="The request is forbidden", msg_code=APIMsgCode.INVALID_REQUEST)
+    return user
+
+async def get_admin_operator_or_teacher(user: User = Depends(get_current_active_user)):
+    if user.role not in [UserRole.ADMIN, UserRole.OPERATOR, UserRole.TEACHER]:
+        raise errors.ForbiddenError(msg="The request is forbidden", msg_code=APIMsgCode.INVALID_REQUEST)
+    return user
+
+async def get_teacher(user: User = Depends(get_current_active_user)):
+    if user.role != UserRole.TEACHER:
         raise errors.ForbiddenError(msg="The request is forbidden", msg_code=APIMsgCode.INVALID_REQUEST)
     return user
 
@@ -82,7 +93,7 @@ class AuthServiceImpl(AuthService):
             raise errors.AuthorizationError(msg='Invalid email or password', msg_code=APIMsgCode.INVALID_CRED)
         if not verify_password(password, user.password):
             raise errors.AuthorizationError(msg='Invalid email or password', msg_code=APIMsgCode.INVALID_CRED)
-        tokens = await create_tokens(user.id, user.email)
+        tokens = await create_tokens(user)
         return tokens
 
     async def refresh_tokens(self, refresh_token: str, db: AsyncSession) -> TokenSch:
@@ -91,11 +102,11 @@ class AuthServiceImpl(AuthService):
         payload = verify_token(refresh_token, "refresh")
         if not payload:
             raise errors.AuthorizationError(msg='Invalid refresh token')
-        # Get user from payload
-        user_id = int(payload.get("sub"))
-        email = payload.get("email")
-        # Create new tokens
-        return await create_tokens(user_id, email)
+        # reload the user so a changed role / institution is reflected in the new access token
+        user = await self.user_repository.get(int(payload.get("sub")), db)
+        if not user:
+            raise errors.AuthorizationError(msg="User not found")
+        return await create_tokens(user)
 
     async def forgot_password(self, request: PasswordRecoveryRequest, db: AsyncSession,
                               background_tasks: BackgroundTasks) -> str:

@@ -2,6 +2,8 @@ from sqlalchemy import select, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.app.models.batch import Batch
+from src.app.models.course import Course
 from src.app.models.enum import UserRole
 from src.app.models.user import User
 from src.app.repositories.base import BaseRepo
@@ -12,11 +14,15 @@ class TeacherRepo(BaseRepo[User]):
     def __init__(self):
         super().__init__(User)
 
-    async def get_all_teacher(self, search: str | None, page: int, size: int, db: AsyncSession):
+    async def get_all_teacher(self, search: str | None, institution_id: int | None,
+                              page: int, size: int, db: AsyncSession):
         query = (
             select(User)
             .options(selectinload(User.institution))
             .where(User.role == UserRole.TEACHER))
+
+        if institution_id is not None:
+            query = query.where(User.institution_id == institution_id)
 
         if search:
             search_term = f"%{search.strip()}%"
@@ -63,3 +69,15 @@ class TeacherRepo(BaseRepo[User]):
         )
         result = await db.execute(query)
         return result.scalar_one_or_none()
+
+    async def get_teacher_courses_with_batches(self, teacher_id: int, db: AsyncSession):
+        """Flat (course, batch) rows for all courses of a teacher; courses without batches come with batch NULL"""
+        query = (
+            select(Course.id.label("course_id"), Course.name.label("course_name"),
+                   Batch.id.label("batch_id"), Batch.name.label("batch_name"))
+            .outerjoin(Batch, Batch.course_id == Course.id)
+            .where(Course.teacher_id == teacher_id)
+            .order_by(Course.id, Batch.id)
+        )
+        result = await db.execute(query)
+        return result.all()

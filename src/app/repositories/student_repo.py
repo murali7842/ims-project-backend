@@ -2,6 +2,9 @@ from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.models.enum import SortOrder
+from src.app.models.batch import Batch
+from src.app.models.course import Course
+from src.app.models.institution import Institution
 from src.app.models.student import Student
 from src.app.repositories.base import BaseRepo
 from src.app.schemas.student_sch import StudentSortBy
@@ -20,11 +23,16 @@ class StudentRepo(BaseRepo[Student]):
             query = query.where(Student.id != exclude_id)
         return await db.scalar(query.limit(1))
 
-    async def get_all_students(self, search: str | None, course_id: int | None, batch_id: int | None,
+    async def get_all_students(self, search: str | None, institution_id: int | None, teacher_id: int | None,
+                               course_id: int | None, batch_id: int | None,
                                sort_by: StudentSortBy, sort_order: SortOrder,
                                page: int, size: int, db: AsyncSession) -> tuple[list[Student], int]:
         query = select(Student)
 
+        if institution_id is not None:
+            query = query.where(Student.institution_id == institution_id)
+        if teacher_id is not None:
+            query = query.where(Student.course_id.in_(select(Course.id).where(Course.teacher_id == teacher_id)))
         if course_id is not None:
             query = query.where(Student.course_id == course_id)
         if batch_id is not None:
@@ -58,3 +66,16 @@ class StudentRepo(BaseRepo[Student]):
 
         result = await db.execute(query)
         return list(result.scalars().all()), total_elements
+
+    async def get_student_details(self, student_id: int, db: AsyncSession):
+        """Student with institution, course and batch names in a single query"""
+        query = (
+            select(Student, Institution.name.label("institution_name"), Course.name.label("course_name"),
+                   Batch.name.label("batch_name"), Course.teacher_id.label("teacher_id"))
+            .outerjoin(Institution, Student.institution_id == Institution.id)
+            .outerjoin(Course, Student.course_id == Course.id)
+            .outerjoin(Batch, Student.batch_id == Batch.id)
+            .where(Student.id == student_id)
+        )
+        result = await db.execute(query)
+        return result.first()
