@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from src.app.models.batch import Batch
 from src.app.models.enum import BatchMode
+from src.app.schemas.base import DropDownSch
 
 
 class BatchSortBy(str, enum.Enum):
@@ -59,3 +60,32 @@ class GetBatchSch(BaseModel):
         )
 
 
+class BatchDetailSch(BaseModel):
+    id: int
+    name: str
+    timing: str
+    student_limit: int
+    start_date: date
+    end_date: date
+    mode: BatchMode
+    course: DropDownSch | None
+    institution: DropDownSch | None
+    total_students: int
+    available_seats: int
+
+    @staticmethod
+    def from_entity(batch: Batch, course_name: str | None, institution_name: str | None,
+                    total_students: int) -> "BatchDetailSch":
+        return BatchDetailSch(
+            id=batch.id,
+            name=batch.name,
+            timing=batch.timing,
+            student_limit=batch.student_limit,
+            start_date=batch.start_date,
+            end_date=batch.end_date,
+            mode=batch.mode,
+            course=DropDownSch.of(batch.course_id, course_name),
+            institution=DropDownSch.of(batch.institution_id, institution_name),
+            total_students=total_students,
+            available_seats=max(batch.student_limit - total_students, 0)
+        )

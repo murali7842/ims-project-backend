@@ -26,11 +26,14 @@ def create_token(data: dict,expires_delta: timedelta) -> str:
     return jwt.encode(to_encode, setting.SECRET_KEY, algorithm=setting.ALGORITHM)
 
 
-def create_access_token(user_id: int, email: str) -> str:
+def create_access_token(user_id: int, email: str, role: str, name: str, institution_id: int | None) -> str:
     return create_token(
         {
             "sub": str(user_id),
             "email": email,
+            "role": role,
+            "name": name,
+            "institution_id": institution_id,
             "type": "access",
             "jti": secrets.token_urlsafe(16)
         },

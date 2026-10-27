@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.models.enum import SortOrder
-from src.app.schemas.institution_sch import InstitutionCreateSch, InstitutionSch, InstitutionUpdateSch, \
+from src.app.schemas.institution_sch import InstitutionCreateSch, InstitutionSch, InstitutionDetailSch, InstitutionUpdateSch, \
     InstitutionSortBy
 from src.app.shared.response import PaginationResponse
 
@@ -15,7 +15,7 @@ class InstitutionService(ABC):
         pass
 
     @abstractmethod
-    async def get_institution_by_id(self, institution_id: int, db: AsyncSession) -> InstitutionSch:
+    async def get_institution_by_id(self, institution_id: int, db: AsyncSession) -> InstitutionDetailSch:
         pass
 
     @abstractmethod

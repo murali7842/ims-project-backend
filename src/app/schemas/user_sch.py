@@ -49,3 +49,10 @@ class GetUserSch(BaseModel):
                 if user.institution else None
             )
         )
+
+
+class UpdateProfileSch(BaseModel):
+    name: str
+    email: EmailStr
+    phone_number: str
+    address: str

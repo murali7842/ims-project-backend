@@ -13,17 +13,24 @@ class PaymentRepo(BaseRepo[Payment]):
     def __init__(self):
         super().__init__(Payment)
 
-    async def get_all_payments(self, search: str | None, student_id: int | None,
+    async def get_all_payments(self, search: str | None, institution_id: int | None, student_id: int | None,
                                sort_by: PaymentSortBy, sort_order: SortOrder,
                                page: int, size: int, db: AsyncSession) -> tuple[list[Payment], int]:
         query = select(Payment)
+
+        # payment has no institution column, so institution and search both go through the student (joined once)
+        if institution_id is not None or search:
+            query = query.join(Student, Payment.student_id == Student.id)
+
+        if institution_id is not None:
+            query = query.where(Student.institution_id == institution_id)
 
         if student_id is not None:
             query = query.where(Payment.student_id == student_id)
 
         if search:
             search_term = f"%{search.strip()}%"
-            query = query.join(Student, Payment.student_id == Student.id).where(
+            query = query.where(
                 or_(
                     Student.name.ilike(search_term),
                     Payment.payment_mode.ilike(search_term),

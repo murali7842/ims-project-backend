@@ -7,9 +7,11 @@ from src.app.repositories.batch_repo import BatchRepo
 from src.app.repositories.course_repo import CourseRepo
 from src.app.repositories.student_repo import StudentRepo
 from src.app.repositories.user_repo import UserRepo
-from src.app.schemas.student_sch import CreateStudentSch, GetStudentSch, UpdateStudentSch, StudentSortBy
+from src.app.schemas.student_sch import CreateStudentSch, GetStudentSch, StudentDetailSch, UpdateStudentSch, StudentSortBy
 from src.app.services.student_service import StudentService
+from src.app.models.user import User
 from src.app.shared.response import PaginationResponse
+from src.app.utils.institution_scope import resolve_institution_id, resolve_teacher_id, ensure_teacher_owns
 
 
 class StudentServiceImpl(StudentService):
@@ -50,18 +52,24 @@ class StudentServiceImpl(StudentService):
         student = await self.student_repo.save(new_student, db)
         return student.id
 
-    async def get_student_by_id(self, student_id: int, db: AsyncSession) -> GetStudentSch:
-        student = await self.student_repo.get(student_id, db)
-        if not student:
+    async def get_student_by_id(self, user: User, student_id: int, db: AsyncSession) -> StudentDetailSch:
+        row = await self.student_repo.get_student_details(student_id, db)
+        if not row:
             raise errors.HTTPError(code=404, msg=f"Student with id {student_id} not found!")
+        ensure_teacher_owns(user, row.teacher_id, "students")
 
-        return GetStudentSch.from_entity(student)
+        return StudentDetailSch.from_entity(row.Student, row.institution_name, row.course_name, row.batch_name)
 
-    async def get_all_students(self, search: str | None, course_id: int | None, batch_id: int | None,
+    async def get_all_students(self, user: User, search: str | None, institution_id: int | None,
+                               course_id: int | None, batch_id: int | None,
                                sort_by: StudentSortBy, sort_order: SortOrder,
                                page: int, size: int, db: AsyncSession) -> PaginationResponse[GetStudentSch]:
+        # operator always gets own institution students, admin gets all or the selected institution
+        institution_id = resolve_institution_id(user, institution_id)
+        # teacher gets only the students of the courses they teach
+        teacher_id = resolve_teacher_id(user)
         students, total_elements = await self.student_repo.get_all_students(
-            search, course_id, batch_id, sort_by, sort_order, page, size, db)
+            search, institution_id, teacher_id, course_id, batch_id, sort_by, sort_order, page, size, db)
 
         student_list = [GetStudentSch.from_entity(student) for student in students]
 

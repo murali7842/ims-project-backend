@@ -3,10 +3,12 @@ from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.common.exception import errors
-from src.app.models.enum import AttemptStatus, ResponseStatus, PublishStatus, SortOrder
+from src.app.models.enum import AttemptStatus, ResponseStatus, PublishStatus, SortOrder, UserRole
 from src.app.models.student_assessment import StudentAssessment, StudentAssessmentSection, StudentAssessmentQuestion, \
     StudentAssessmentQuestionOption, AssessmentInstitutionPublish, StudentAssessmentAnswer, StudentAssessmentAttempt
+from src.app.models.user import User
 from src.app.repositories.assessment_institution_publish_repo import AssessmentInstitutionPublishRepo
+from src.app.repositories.course_repo import CourseRepo
 from src.app.repositories.institution_repo import InstitutionRepo
 from src.app.repositories.student_assessment_attempt_repo import StudentAssessmentAttemptRepo
 from src.app.repositories.student_assessment_question_option_repo import StudentAssessmentQuestionOptionRepo
@@ -19,6 +21,7 @@ from src.app.schemas.student_assessment_sch import StudentAssessmentCreateSch, S
 from src.app.services.student_assessment_service import StudentAssessmentService
 from src.app.shared.response import PaginationResponse
 from src.app.utils import upload_util
+from src.app.utils.institution_scope import resolve_teacher_id
 
 
 class StudentAssessmentServiceImpl(StudentAssessmentService):
@@ -29,6 +32,7 @@ class StudentAssessmentServiceImpl(StudentAssessmentService):
                  assessment_institution_publish_repo: AssessmentInstitutionPublishRepo,
                  institution_repo: InstitutionRepo,
                  student_assessment_attempt_repo: StudentAssessmentAttemptRepo,
+                 course_repo: CourseRepo,
                  # student_repo: StudentRepo
 
                  ):
@@ -39,10 +43,12 @@ class StudentAssessmentServiceImpl(StudentAssessmentService):
         self.assessment_institution_publish_repo = assessment_institution_publish_repo
         self.institution_repo = institution_repo
         self.student_assessment_attempt_repo = student_assessment_attempt_repo
+        self.course_repo = course_repo
         # self.student_repo =student_repo
         self.attachment_id_counter = 1
 
-    async def create_assessment(self, sch: StudentAssessmentCreateSch, db: AsyncSession) -> str:
+    async def create_assessment(self, user: User, sch: StudentAssessmentCreateSch, db: AsyncSession) -> str:
+        await self._apply_teacher_course(user, sch, db)
         assessment = StudentAssessment(
             title=sch.title,
             instruction=sch.instruction,
@@ -228,28 +234,34 @@ class StudentAssessmentServiceImpl(StudentAssessmentService):
             f"Attempt ID: {saved_attempt.id}"
         )
 
-    async def get_all_assessments(self, search: str | None, status: PublishStatus | None, course_id: int | None,
+    async def get_all_assessments(self, user: User, search: str | None, status: PublishStatus | None,
+                                  course_id: int | None,
                                   sort_by: StudentAssessmentSortBy, sort_order: SortOrder,
                                   page: int, size: int, db: AsyncSession) -> PaginationResponse[StudentAssessmentSch]:
+        # teacher gets only the exams of the courses they teach
+        teacher_id = resolve_teacher_id(user)
         assessments, total_elements = await self.student_assessment_repo.get_all_assessments(
-            search, status, course_id, sort_by, sort_order, page, size, db)
+            search, status, course_id, teacher_id, sort_by, sort_order, page, size, db)
 
         assessment_list = [StudentAssessmentSch.from_entity(assessment) for assessment in assessments]
 
         return PaginationResponse[StudentAssessmentSch](body=assessment_list).set_page_info(
             total_elements=total_elements, page=page, size=size)
 
-    async def get_assessment_by_id(self, assessment_id: int, db: AsyncSession) -> StudentAssessmentDetailSch:
+    async def get_assessment_by_id(self, user: User, assessment_id: int, db: AsyncSession) -> StudentAssessmentDetailSch:
         assessment = await self.student_assessment_repo.get_with_details(assessment_id, db)
         if not assessment:
             raise errors.HTTPError(code=404, msg=f"Assessment with id {assessment_id} not found!")
+        await self._ensure_teacher_owns_assessment(user, assessment, db)
 
         return StudentAssessmentDetailSch.from_entity(assessment)
 
-    async def update_assessment(self, sch: StudentAssessmentUpdateSch, db: AsyncSession) -> str:
+    async def update_assessment(self, user: User, sch: StudentAssessmentUpdateSch, db: AsyncSession) -> str:
         assessment = await self.student_assessment_repo.get_with_details(sch.id, db)
         if not assessment:
             raise errors.HTTPError(code=404, msg=f"Assessment with id {sch.id} not found!")
+        await self._ensure_teacher_owns_assessment(user, assessment, db)
+        await self._apply_teacher_course(user, sch, db)
 
         # editing questions after students answered them would corrupt their graded attempts
         if sch.section is not None and await self.student_assessment_attempt_repo.has_attempts(sch.id, db):
@@ -341,6 +353,24 @@ class StudentAssessmentServiceImpl(StudentAssessmentService):
                 option.option_attachment = await self.process_attachment_file(option_data.option_attachment)
             options.append(option)
         question.options = options
+
+    async def _apply_teacher_course(self, user: User, sch: StudentAssessmentCreateSch, db: AsyncSession) -> None:
+        """Teacher can only target a course they teach; the exam is always published to that course's institution"""
+        if user.role != UserRole.TEACHER:
+            return
+        course = await self.course_repo.get(sch.course_id, db)
+        if not course or course.teacher_id != user.id:
+            raise errors.HTTPError(code=403, msg="You can only create or edit exams for your own courses")
+        sch.institution_ids = [course.institution_id] if course.institution_id is not None else []
+
+    async def _ensure_teacher_owns_assessment(self, user: User, assessment: StudentAssessment,
+                                              db: AsyncSession) -> None:
+        """Teacher can open an exam only when it is published to one of their courses"""
+        if user.role != UserRole.TEACHER:
+            return
+        teacher_course_ids = await self.course_repo.get_course_ids_by_teacher(user.id, db)
+        if not any(mapping.course_id in teacher_course_ids for mapping in assessment.institution_mappings):
+            raise errors.HTTPError(code=403, msg="You can only access exams of your own courses")
 
     @staticmethod
     def _pick_existing(existing: dict, item_id: int | None, label: str):

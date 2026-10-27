@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.models.enum import SortOrder
 from src.app.schemas.payment_sch import CreatePaymentSch, GetPaymentSch, UpdatePaymentSch, PaymentSortBy
+from src.app.models.user import User
 from src.app.shared.response import PaginationResponse
 
 
@@ -17,7 +18,8 @@ class PaymentService(ABC):
         pass
 
     @abstractmethod
-    async def get_all_payments(self, search: str | None, student_id: int | None,
+    async def get_all_payments(self, user: User, search: str | None, institution_id: int | None,
+                               student_id: int | None,
                                sort_by: PaymentSortBy, sort_order: SortOrder,
                                page: int, size: int, db: AsyncSession) -> PaginationResponse[GetPaymentSch]:
         pass

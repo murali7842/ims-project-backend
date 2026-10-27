@@ -3,9 +3,11 @@ from src.app.common.exception import errors
 from src.app.models.batch import Batch
 from src.app.models.enum import SortOrder
 from src.app.repositories.batch_repo import BatchRepo
-from src.app.schemas.batch_sch import CreateBatchSch, GetBatchSch, UpdateBatchSch, BatchSortBy
+from src.app.schemas.batch_sch import CreateBatchSch, GetBatchSch, BatchDetailSch, UpdateBatchSch, BatchSortBy
 from src.app.services.batch_service import BatchService
+from src.app.models.user import User
 from src.app.shared.response import PaginationResponse
+from src.app.utils.institution_scope import resolve_institution_id, resolve_teacher_id, ensure_teacher_owns
 
 
 class BatchServiceImpl(BatchService):
@@ -33,16 +35,23 @@ class BatchServiceImpl(BatchService):
         batch = await self.batch_repo.save(new_batch, db)
         return batch.id
 
-    async def get_batch_by_id(self, batch_id: int, db: AsyncSession) -> GetBatchSch:
-        batch = await self.batch_repo.get(batch_id, db)
-        if not batch:
+    async def get_batch_by_id(self, user: User, batch_id: int, db: AsyncSession) -> BatchDetailSch:
+        row = await self.batch_repo.get_batch_details(batch_id, db)
+        if not row:
             raise errors.HTTPError(code=404, msg=f"Batch with id {batch_id} not found!")
+        ensure_teacher_owns(user, row.teacher_id, "batches")
 
-        return GetBatchSch.from_entity(batch)
+        return BatchDetailSch.from_entity(row.Batch, row.course_name, row.institution_name, row.total_students)
 
-    async def get_all_batches(self, search: str | None, sort_by: BatchSortBy, sort_order: SortOrder,
+    async def get_all_batches(self, user: User, search: str | None, institution_id: int | None,
+                              sort_by: BatchSortBy, sort_order: SortOrder,
                               page: int, size: int, db: AsyncSession) -> PaginationResponse[GetBatchSch]:
-        batches, total_elements = await self.batch_repo.get_all_batches(search, sort_by, sort_order, page, size, db)
+        # operator always gets own institution batches, admin gets all or the selected institution
+        institution_id = resolve_institution_id(user, institution_id)
+        # teacher gets only the batches of the courses they teach
+        teacher_id = resolve_teacher_id(user)
+        batches, total_elements = await self.batch_repo.get_all_batches(
+            search, institution_id, teacher_id, sort_by, sort_order, page, size, db)
 
         batch_list = [GetBatchSch.from_entity(batch) for batch in batches]
 
